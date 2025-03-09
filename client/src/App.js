@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { motion } from 'framer-motion';
 import './App.css';
 
 function App() {
@@ -11,6 +12,7 @@ function App() {
   const [pricePerUnit, setPricePerUnit] = useState(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [darkMode, setDarkMode] = useState(false);
 
   const fetchReadings = async (url = '/api/readings') => {
     setLoading(true);
@@ -71,42 +73,89 @@ function App() {
     setLoading(false);
   };
 
-  // Usage Calculations
   const calculateUsage = () => {
-    const daily = [];
+    const daily = {};
     const monthly = {};
-    let totalUsage = 0;
+    let totalUsage = { Meter1: 0, Meter2: 0, Meter3: 0 };
+    const rangeUsage = { Meter1: 0, Meter2: 0, Meter3: 0 };
 
-    readings.forEach((r, i) => {
-      const date = new Date(r.timestamp).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' });
-      const month = new Date(r.timestamp).toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
+    const readingsByMeter = readings.reduce((acc, r) => {
+      acc[r.meterId] = acc[r.meterId] || [];
+      acc[r.meterId].push(r);
+      return acc;
+    }, {});
 
-      if (i === 0) {
-        daily.push({ date, usage: 'N/A' });
-      } else {
-        const prev = readings[i - 1];
-        if (new Date(prev.timestamp).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' }) !== date) {
-          const usage = r.reading - prev.reading;
-          daily.push({ date, usage });
-          totalUsage += usage;
-          monthly[month] = (monthly[month] || 0) + usage;
+    Object.keys(readingsByMeter).forEach(meter => {
+      const meterReadings = readingsByMeter[meter].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      daily[meter] = [];
+      monthly[meter] = {};
+
+      const readingsByDate = meterReadings.reduce((acc, r) => {
+        const date = new Date(r.timestamp).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' });
+        acc[date] = acc[date] || [];
+        acc[date].push(r);
+        return acc;
+      }, {});
+
+      const dates = Object.keys(readingsByDate).sort((a, b) => new Date(a) - new Date(b));
+
+      let prevLastReading = null;
+      dates.forEach((date, i) => {
+        const dayReadings = readingsByDate[date];
+        const firstReading = dayReadings[0].reading;
+        const lastReading = dayReadings[dayReadings.length - 1].reading;
+        const month = new Date(date).toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
+
+        let usage;
+        if (dayReadings.length > 1) {
+          usage = lastReading - firstReading;
+        } else if (i === 0) {
+          usage = 'N/A';
+        } else {
+          usage = lastReading - prevLastReading;
         }
+
+        daily[meter].push({ date, usage });
+        if (usage !== 'N/A') {
+          totalUsage[meter] += usage;
+          monthly[meter][month] = (monthly[meter][month] || 0) + usage;
+        }
+        prevLastReading = lastReading;
+      });
+
+      if (meterReadings.length > 1) {
+        rangeUsage[meter] = meterReadings[meterReadings.length - 1].reading - meterReadings[0].reading;
       }
     });
 
-    const rangeUsage = readings.length > 1 ? readings[readings.length - 1].reading - readings[0].reading : 0;
     return { daily, monthly, total: totalUsage, range: rangeUsage };
   };
 
   const usage = calculateUsage();
 
   return (
-    <div className="container">
-      <h1>Electrical Meter Readings</h1>
-      {loading && <p>Loading...</p>}
-      {error && <p className="error">{error}</p>}
+    <div className={`container ${darkMode ? 'dark-mode' : ''}`}>
+      <motion.div
+        className="header"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h1><i className="fas fa-plug"></i> Meter Readings</h1>
+        <button className="mode-toggle" onClick={() => setDarkMode(!darkMode)}>
+          <i className={darkMode ? 'fas fa-sun' : 'fas fa-moon'}></i>
+          {darkMode ? ' Light' : ' Dark'}
+        </button>
+      </motion.div>
 
-      <div className="input-section">
+      {loading && <motion.p className="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>Loading...</motion.p>}
+      {error && (
+        <motion.p className="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+          <i className="fas fa-exclamation-circle"></i> {error}
+        </motion.p>
+      )}
+
+      <motion.div className="input-section" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
         <select value={meterId} onChange={(e) => setMeterId(e.target.value)}>
           <option value="Meter1">Meter 1</option>
           <option value="Meter2">Meter 2</option>
@@ -116,56 +165,125 @@ function App() {
           type="number"
           value={reading}
           onChange={(e) => setReading(e.target.value)}
-          placeholder="Enter reading"
+          placeholder="Enter reading (kWh)"
         />
-        <button onClick={addReading}>Add Reading</button>
-      </div>
+        <button onClick={addReading} disabled={loading}><i className="fas fa-plus"></i> Add</button>
+      </motion.div>
 
-      <div className="range-section">
+      <motion.div className="range-section" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
         <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-        <button onClick={fetchRange}>View Range</button>
-      </div>
+        <button onClick={fetchRange} disabled={loading}><i className="fas fa-filter"></i> Filter</button>
+      </motion.div>
 
-      <div className="price-section">
-        <label>Price per Unit (₹): </label>
+      <motion.div className="price-section" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.3 }}>
+        <label><i className="fas fa-rupee-sign"></i> Price per Unit (₹): </label>
         <input
           type="number"
           value={pricePerUnit}
           onChange={(e) => setPricePerUnit(e.target.value)}
+          min="0"
+          step="0.01"
         />
-      </div>
+      </motion.div>
 
-      <div className="readings">
-        <h2>Readings</h2>
-        <button onClick={clearAll}>Clear All</button>
-        <ul>
-          {readings.map(r => (
-            <li key={r._id}>
-              {r.meterId}: {r.reading} kWh - {new Date(r.timestamp).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })}
-              <button onClick={() => deleteReadings([r._id])}>Delete</button>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <motion.div className="readings" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
+        <div className="section-header">
+          <h2><i className="fas fa-list"></i> Readings</h2>
+          <button onClick={clearAll} disabled={loading}><i className="fas fa-trash-alt"></i> Clear All</button>
+        </div>
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Meter</th>
+                <th>Reading (kWh)</th>
+                <th>Timestamp</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {readings.map(r => (
+                <motion.tr
+                  key={r._id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <td>{r.meterId}</td>
+                  <td>{r.reading}</td>
+                  <td>{new Date(r.timestamp).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })}</td>
+                  <td>
+                    <button onClick={() => deleteReadings([r._id])} disabled={loading}><i className="fas fa-times"></i></button>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </motion.div>
 
-      <div className="usage">
-        <h2>Usage</h2>
-        <p>Total Usage: {usage.total} kWh (₹{usage.total * pricePerUnit})</p>
-        <p>Range Usage: {usage.range} kWh (₹{usage.range * pricePerUnit})</p>
-        <h3>Daily Usage</h3>
-        <ul>
-          {usage.daily.map(d => (
-            <li key={d.date}>{d.date}: {d.usage === 'N/A' ? 'N/A' : `${d.usage} kWh (₹${d.usage * pricePerUnit})`}</li>
-          ))}
-        </ul>
-        <h3>Monthly Usage</h3>
-        <ul>
-          {Object.entries(usage.monthly).map(([month, usage]) => (
-            <li key={month}>{month}: {usage} kWh (₹{usage * pricePerUnit})</li>
-          ))}
-        </ul>
-      </div>
+      <motion.div className="usage" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5 }}>
+        <h2><i className="fas fa-chart-line"></i> Usage</h2>
+        {Object.keys(usage.total).map(meter => (
+          <div key={meter} className="meter-usage">
+            <h3><i className="fas fa-tachometer-alt"></i> {meter}</h3>
+            <p>Total Usage: {usage.total[meter]} kWh (₹{(usage.total[meter] * pricePerUnit).toFixed(2)})</p>
+            <p>Range Usage: {usage.range[meter]} kWh (₹{(usage.range[meter] * pricePerUnit).toFixed(2)})</p>
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Daily Usage (kWh)</th>
+                    <th>Cost (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usage.daily[meter]?.map(d => (
+                    <motion.tr
+                      key={d.date}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <td>{d.date}</td>
+                      <td>{d.usage === 'N/A' ? 'N/A' : d.usage}</td>
+                      <td>{d.usage === 'N/A' ? 'N/A' : (d.usage * pricePerUnit).toFixed(2)}</td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <h4>Monthly Usage</h4>
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th>Usage (kWh)</th>
+                    <th>Cost (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(usage.monthly[meter] || {}).map(([month, usage]) => (
+                    <motion.tr
+                      key={month}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <td>{month}</td>
+                      <td>{usage}</td>
+                      <td>{(usage * pricePerUnit).toFixed(2)}</td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
+      </motion.div>
     </div>
   );
 }

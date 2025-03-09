@@ -5,83 +5,257 @@
 }
 
 body {
-  font-family: Arial, sans-serif;
-  background-color: #f4f4f9;
-  color: #333;
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f7f9fc;
+  color: #2c3e50;
+  line-height: 1.6;
+  transition: background 0.5s, color 0.5s;
 }
 
+/* Container */
 .container {
-  max-width: 900px;
-  margin: 20px auto;
+  max-width: 1100px;
+  margin: 40px auto;
   padding: 20px;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark Mode */
+.container.dark-mode {
+  background: #1a1f2b;
+  color: #d9e1e8;
+}
+
+.container.dark-mode .input-section,
+.container.dark-mode .range-section,
+.container.dark-mode .price-section,
+.container.dark-mode .readings,
+.container.dark-mode .usage {
+  background: #2a3244;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.container.dark-mode input,
+.container.dark-mode select,
+.container.dark-mode button {
+  background: #3b4458;
+  border-color: #4a5366;
+  color: #d9e1e8;
+}
+
+.container.dark-mode .error {
+  background: #4a2c2c;
+}
+
+.container.dark-mode table {
+  background: #2a3244;
+}
+
+.container.dark-mode th {
+  background: #3b4458;
+}
+
+.container.dark-mode tr:hover {
+  background: #3b4458;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
 }
 
 h1 {
-  text-align: center;
-  color: #2c3e50;
-  margin-bottom: 20px;
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.mode-toggle {
+  background: #3498db;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mode-toggle:hover {
+  background: #2980b9;
+  transform: scale(1.05);
+}
+
+/* Sections */
+.input-section, .range-section, .price-section, .readings, .usage {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
 }
 
 .input-section, .range-section, .price-section {
-  margin-bottom: 20px;
   display: flex;
-  gap: 10px;
+  gap: 15px;
+  align-items: center;
   flex-wrap: wrap;
 }
 
 input, select, button {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 16px;
+  padding: 12px 16px;
+  border: 1px solid #e0e6ed;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #fff;
+  transition: all 0.3s ease;
+}
+
+input:focus, select:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 6px rgba(52, 152, 219, 0.3);
+  outline: none;
 }
 
 button {
-  background-color: #3498db;
+  background: #3498db;
   color: #fff;
+  border: none;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.3s;
 }
 
 button:hover {
-  background-color: #2980b9;
+  background: #2980b9;
+  transform: scale(1.05);
 }
 
+button:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Icons */
+h2 i, h3 i {
+  margin-right: 10px;
+  color: #3498db;
+}
+
+/* Error and Loading */
 .error {
   color: #e74c3c;
-  margin-bottom: 10px;
+  background: #fceaea;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
 }
 
-.readings, .usage {
-  margin-top: 20px;
+.loading {
+  text-align: center;
+  color: #7f8c8d;
+  font-style: italic;
 }
 
-ul {
-  list-style: none;
-}
-
-li {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
+/* Section Header */
+.section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 15px;
 }
 
-@media (max-width: 600px) {
+/* Table Styles */
+.table-container {
+  max-height: 300px;
+  overflow-y: auto;
+  border-radius: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+th, td {
+  padding: 12px 15px;
+  text-align: left;
+}
+
+th {
+  background: #f1f5f9;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+tr {
+  transition: background 0.2s;
+}
+
+tr:hover {
+  background: #f9fbfc;
+}
+
+td button {
+  background: #e74c3c;
+  padding: 6px 10px;
+}
+
+td button:hover {
+  background: #c0392b;
+}
+
+/* Usage Section */
+.meter-usage {
+  margin-top: 25px;
+}
+
+.meter-usage h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.meter-usage h4 {
+  font-size: 1.2rem;
+  margin: 20px 0 10px;
+}
+
+.meter-usage p {
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
   .container {
-    margin: 10px;
+    margin: 20px;
     padding: 15px;
   }
 
-  .input-section, .range-section {
+  .input-section, .range-section, .price-section {
     flex-direction: column;
+    gap: 10px;
   }
 
   input, select, button {
     width: 100%;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .table-container {
+    max-height: 200px;
   }
 }
