@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "cd server && node server.js",
+    "build": "cd client && npm install && npm run build",
+    "postinstall": "cd server && npm install"
   },
   "repository": {
     "type": "git",
@@ -17,5 +19,11 @@
   "bugs": {
     "url": "https://github.com/sabith2000/meter-readings-app/issues"
   },
-  "homepage": "https://github.com/sabith2000/meter-readings-app#readme"
+  "homepage": "https://github.com/sabith2000/meter-readings-app#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mongoose": "^8.12.1"
+  }
 }
