@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import './App.css';
@@ -10,20 +10,20 @@ function App() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [priceTiers, setPriceTiers] = useState({
-    tier1: 0,   // 0-100
-    tier2: 4.7, // 101-400
-    tier3: 6.3, // 401-500
-    tier4: 8.4, // 501-600
-    tier5: 9.45,// 601-800
-    tier6: 10.5,// 801-1000
-    tier7: 11.55,// 1001-5000
+    tier1: 0,
+    tier2: 4.7,
+    tier3: 6.3,
+    tier4: 8.4,
+    tier5: 9.45,
+    tier6: 10.5,
+    tier7: 11.55,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [darkMode, setDarkMode] = useState(false);
   const [usage, setUsage] = useState(null);
 
-  const fetchReadings = async (url = '/api/readings', params = {}) => {
+  const fetchReadings = useCallback(async (url = '/api/readings', params = {}) => {
     setLoading(true);
     try {
       const res = await axios.get(url, {
@@ -43,26 +43,29 @@ function App() {
       setUsage(res.data.usage);
       setError('');
     } catch (err) {
-      setError('Failed to load readings');
+      setError('Failed to load readings: ' + (err.response?.data?.error || err.message));
     }
     setLoading(false);
-  };
+  }, [meterId, priceTiers]); // Dependencies for fetchReadings
 
   useEffect(() => {
     fetchReadings();
-  }, [meterId, priceTiers]);
+  }, [fetchReadings]); // Now fetchReadings is stable and can be a dependency
 
   const addReading = async () => {
     if (!reading) return setError('Reading is required');
     setLoading(true);
     try {
+      console.log('Sending POST /api/readings/add with:', { meterId, reading: Number(reading) });
       const res = await axios.post('/api/readings/add', { meterId, reading: Number(reading) });
+      console.log('Response from POST /api/readings/add:', res.data);
       setReadings([...readings, res.data]);
       fetchReadings();
       setReading('');
       setError('');
     } catch (err) {
-      setError('Failed to add reading');
+      console.error('Error adding reading:', err.response?.data?.error || err.message);
+      setError('Failed to add reading: ' + (err.response?.data?.error || err.message));
     }
     setLoading(false);
   };
@@ -79,7 +82,7 @@ function App() {
       fetchReadings();
       setError('');
     } catch (err) {
-      setError('Failed to delete');
+      setError('Failed to delete: ' + (err.response?.data?.error || err.message));
     }
     setLoading(false);
   };
@@ -92,7 +95,7 @@ function App() {
       setUsage(null);
       setError('');
     } catch (err) {
-      setError('Failed to clear');
+      setError('Failed to clear: ' + (err.response?.data?.error || err.message));
     }
     setLoading(false);
   };

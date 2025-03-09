@@ -5,11 +5,18 @@ const Reading = require('../models/Reading');
 // Add a reading
 router.post('/add', async (req, res) => {
   try {
+    console.log('Received POST /api/readings/add with body:', req.body); // Debug log
     const { meterId, reading } = req.body;
+    if (!meterId || !reading) {
+      console.log('Validation failed: meterId or reading missing');
+      return res.status(400).json({ error: 'meterId and reading are required' });
+    }
     const newReading = new Reading({ meterId, reading });
-    await newReading.save();
-    res.status(201).json(newReading);
+    const savedReading = await newReading.save();
+    console.log('Reading saved successfully:', savedReading); // Debug log
+    res.status(201).json(savedReading);
   } catch (error) {
+    console.error('Error saving reading:', error.message); // Debug log
     res.status(500).json({ error: 'Failed to add reading' });
   }
 });
@@ -17,22 +24,20 @@ router.post('/add', async (req, res) => {
 // Get all readings with usage and cost calculations
 router.get('/', async (req, res) => {
   try {
-    const { meterId, tier1, tier2, tier3, tier4, tier5, tier6, tier7 } = req.query; // Price tiers from client
+    const { meterId, tier1, tier2, tier3, tier4, tier5, tier6, tier7 } = req.query;
     const priceTiers = {
-      tier1: parseFloat(tier1) || 0,   // 0-100
-      tier2: parseFloat(tier2) || 4.7, // 101-400
-      tier3: parseFloat(tier3) || 6.3, // 401-500
-      tier4: parseFloat(tier4) || 8.4, // 501-600
-      tier5: parseFloat(tier5) || 9.45,// 601-800
-      tier6: parseFloat(tier6) || 10.5,// 801-1000
-      tier7: parseFloat(tier7) || 11.55,// 1001-5000
+      tier1: parseFloat(tier1) || 0,
+      tier2: parseFloat(tier2) || 4.7,
+      tier3: parseFloat(tier3) || 6.3,
+      tier4: parseFloat(tier4) || 8.4,
+      tier5: parseFloat(tier5) || 9.45,
+      tier6: parseFloat(tier6) || 10.5,
+      tier7: parseFloat(tier7) || 11.55,
     };
 
-    // Fetch readings, optionally filtered by meterId
     const query = meterId && meterId !== 'All' ? { meterId } : {};
     const readings = await Reading.find(query).sort({ timestamp: 1 });
 
-    // Calculate usage and cost
     const daily = {};
     const monthly = {};
     let totalUsage = { Meter1: 0, Meter2: 0, Meter3: 0 };
