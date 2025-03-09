@@ -23,22 +23,17 @@ function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [usage, setUsage] = useState(null);
   const [isSlabOpen, setIsSlabOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [token, setToken] = useState(localStorage.getItem('token'));
 
   const fetchReadings = useCallback(async (url = '/api/readings', params = {}) => {
     setLoading(true);
     try {
       const res = await axios.get(url, {
-        params: {
-          meterId,
-          tier1: priceTiers.tier1,
-          tier2: priceTiers.tier2,
-          tier3: priceTiers.tier3,
-          tier4: priceTiers.tier4,
-          tier5: priceTiers.tier5,
-          tier6: priceTiers.tier6,
-          tier7: priceTiers.tier7,
-          ...params,
-        },
+        params,
+        headers: { Authorization: `Bearer ${token}` },
       });
       setReadings(res.data.readings);
       setUsage(res.data.usage);
@@ -47,25 +42,29 @@ function App() {
       setError('Failed to load readings: ' + (err.response?.data?.error || err.message));
     }
     setLoading(false);
-  }, [meterId, priceTiers]);
+  }, [token]);
 
   useEffect(() => {
-    fetchReadings();
-  }, [fetchReadings]);
+    if (token) {
+      setIsAuthenticated(true);
+      fetchReadings(); // Initial fetch
+      const interval = setInterval(() => fetchReadings(), 5000); // Poll every 5 seconds
+      return () => clearInterval(interval); // Cleanup on unmount
+    }
+  }, [token, fetchReadings]);
 
   const addReading = async () => {
     if (!reading) return setError('Reading is required');
     setLoading(true);
     try {
-      console.log('Sending POST /api/readings/add with:', { meterId, reading: Number(reading) });
-      const res = await axios.post('/api/readings/add', { meterId, reading: Number(reading) });
-      console.log('Response from POST /api/readings/add:', res.data);
+      const res = await axios.post('/api/readings/add', { meterId, reading: Number(reading) }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setReadings([...readings, res.data]);
       fetchReadings();
       setReading('');
       setError('');
     } catch (err) {
-      console.error('Error adding reading:', err.response?.data?.error || err.message);
       setError('Failed to add reading: ' + (err.response?.data?.error || err.message));
     }
     setLoading(false);
@@ -79,7 +78,10 @@ function App() {
   const deleteReadings = async (ids) => {
     setLoading(true);
     try {
-      await axios.delete('/api/readings/delete', { data: { ids } });
+      await axios.delete('/api/readings/delete', {
+        data: { ids },
+        headers: { Authorization: `Bearer ${token}` },
+      });
       fetchReadings();
       setError('');
     } catch (err) {
@@ -91,7 +93,9 @@ function App() {
   const clearAll = async () => {
     setLoading(true);
     try {
-      await axios.delete('/api/readings/clear');
+      await axios.delete('/api/readings/clear', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setReadings([]);
       setUsage(null);
       setError('');
@@ -100,6 +104,78 @@ function App() {
     }
     setLoading(false);
   };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post('/api/auth/login', { username, password });
+      const token = res.data.token;
+      setToken(token);
+      localStorage.setItem('token', token);
+      setIsAuthenticated(true);
+      setUsername('');
+      setPassword('');
+      setError('');
+    } catch (err) {
+      setError('Login failed: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleLogout = () => {
+    setToken('');
+    localStorage.removeItem('token');
+    setIsAuthenticated(false);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className={`container ${darkMode ? 'dark-mode' : ''}`}>
+        <motion.div
+          className="header"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h1><i className="fas fa-plug"></i> Meter Readings</h1>
+          <button className="mode-toggle" onClick={() => setDarkMode(!darkMode)}>
+            <i className={darkMode ? 'fas fa-sun' : 'fas fa-moon'}></i>
+            {darkMode ? ' Light' : ' Dark'}
+          </button>
+        </motion.div>
+        {error && (
+          <motion.p className="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+            <i className="fas fa-exclamation-circle"></i> {error}
+          </motion.p>
+        )}
+        <motion.div
+          className="login-section"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2><i className="fas fa-sign-in-alt"></i> Login</h2>
+          <form onSubmit={handleLogin}>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Username"
+              required
+            />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              required
+            />
+            <button type="submit" disabled={loading}><i className="fas fa-sign-in-alt"></i> Login</button>
+          </form>
+          <p>Not registered? <a href="#" onClick={() => setError('Registration not implemented yet')}>Register</a></p>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className={`container ${darkMode ? 'dark-mode' : ''}`}>
@@ -114,6 +190,7 @@ function App() {
           <i className={darkMode ? 'fas fa-sun' : 'fas fa-moon'}></i>
           {darkMode ? ' Light' : ' Dark'}
         </button>
+        <button className="logout-button" onClick={handleLogout}>Logout</button>
       </motion.div>
 
       {loading && <motion.p className="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>Loading...</motion.p>}

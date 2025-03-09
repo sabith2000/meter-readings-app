@@ -2,16 +2,32 @@ const express = require('express');
 const router = express.Router();
 const Reading = require('../models/Reading');
 
-// Add a reading
+// Add a reading with validation
 router.post('/add', async (req, res) => {
   try {
     console.log('Received POST /api/readings/add with body:', req.body);
     const { meterId, reading } = req.body;
+
+    // Validate input
     if (!meterId || !reading) {
       console.log('Validation failed: meterId or reading missing');
       return res.status(400).json({ error: 'meterId and reading are required' });
     }
-    const newReading = new Reading({ meterId, reading });
+
+    const readingValue = Number(reading);
+    if (isNaN(readingValue) || readingValue <= 0) {
+      console.log('Validation failed: reading must be a positive number');
+      return res.status(400).json({ error: 'Reading must be a positive number' });
+    }
+
+    // Check if the new reading is less than the last reading for the same meter
+    const lastReading = await Reading.findOne({ meterId }).sort({ timestamp: -1 });
+    if (lastReading && readingValue < lastReading.reading) {
+      console.log('Validation failed: new reading cannot be less than the last reading');
+      return res.status(400).json({ error: `New reading (${readingValue}) cannot be less than the last reading (${lastReading.reading})` });
+    }
+
+    const newReading = new Reading({ meterId, reading: readingValue });
     const savedReading = await newReading.save();
     console.log('Reading saved successfully:', savedReading);
     res.status(201).json(savedReading);
@@ -35,7 +51,7 @@ router.get('/', async (req, res) => {
       tier7: parseFloat(tier7) || 11.55,
     };
 
-    console.log('Fetching readings with meterId:', meterId, 'and priceTiers:', priceTiers); // Debug log
+    console.log('Fetching readings with meterId:', meterId, 'and priceTiers:', priceTiers);
 
     const query = meterId && meterId !== 'All' ? { meterId } : {};
     const readings = await Reading.find(query).sort({ timestamp: 1 });
