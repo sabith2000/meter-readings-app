@@ -9,16 +9,38 @@ function App() {
   const [reading, setReading] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [pricePerUnit, setPricePerUnit] = useState(5);
+  const [priceTiers, setPriceTiers] = useState({
+    tier1: 0,   // 0-100
+    tier2: 4.7, // 101-400
+    tier3: 6.3, // 401-500
+    tier4: 8.4, // 501-600
+    tier5: 9.45,// 601-800
+    tier6: 10.5,// 801-1000
+    tier7: 11.55,// 1001-5000
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [darkMode, setDarkMode] = useState(false);
+  const [usage, setUsage] = useState(null);
 
-  const fetchReadings = async (url = '/api/readings') => {
+  const fetchReadings = async (url = '/api/readings', params = {}) => {
     setLoading(true);
     try {
-      const res = await axios.get(url);
-      setReadings(res.data);
+      const res = await axios.get(url, {
+        params: {
+          meterId,
+          tier1: priceTiers.tier1,
+          tier2: priceTiers.tier2,
+          tier3: priceTiers.tier3,
+          tier4: priceTiers.tier4,
+          tier5: priceTiers.tier5,
+          tier6: priceTiers.tier6,
+          tier7: priceTiers.tier7,
+          ...params,
+        },
+      });
+      setReadings(res.data.readings);
+      setUsage(res.data.usage);
       setError('');
     } catch (err) {
       setError('Failed to load readings');
@@ -28,7 +50,7 @@ function App() {
 
   useEffect(() => {
     fetchReadings();
-  }, []);
+  }, [meterId, priceTiers]);
 
   const addReading = async () => {
     if (!reading) return setError('Reading is required');
@@ -36,6 +58,7 @@ function App() {
     try {
       const res = await axios.post('/api/readings/add', { meterId, reading: Number(reading) });
       setReadings([...readings, res.data]);
+      fetchReadings();
       setReading('');
       setError('');
     } catch (err) {
@@ -53,7 +76,7 @@ function App() {
     setLoading(true);
     try {
       await axios.delete('/api/readings/delete', { data: { ids } });
-      setReadings(readings.filter(r => !ids.includes(r._id)));
+      fetchReadings();
       setError('');
     } catch (err) {
       setError('Failed to delete');
@@ -66,72 +89,13 @@ function App() {
     try {
       await axios.delete('/api/readings/clear');
       setReadings([]);
+      setUsage(null);
       setError('');
     } catch (err) {
       setError('Failed to clear');
     }
     setLoading(false);
   };
-
-  const calculateUsage = () => {
-    const daily = {};
-    const monthly = {};
-    let totalUsage = { Meter1: 0, Meter2: 0, Meter3: 0 };
-    const rangeUsage = { Meter1: 0, Meter2: 0, Meter3: 0 };
-
-    const readingsByMeter = readings.reduce((acc, r) => {
-      acc[r.meterId] = acc[r.meterId] || [];
-      acc[r.meterId].push(r);
-      return acc;
-    }, {});
-
-    Object.keys(readingsByMeter).forEach(meter => {
-      const meterReadings = readingsByMeter[meter].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-      daily[meter] = [];
-      monthly[meter] = {};
-
-      const readingsByDate = meterReadings.reduce((acc, r) => {
-        const date = new Date(r.timestamp).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' });
-        acc[date] = acc[date] || [];
-        acc[date].push(r);
-        return acc;
-      }, {});
-
-      const dates = Object.keys(readingsByDate).sort((a, b) => new Date(a) - new Date(b));
-
-      let prevLastReading = null;
-      dates.forEach((date, i) => {
-        const dayReadings = readingsByDate[date];
-        const firstReading = dayReadings[0].reading;
-        const lastReading = dayReadings[dayReadings.length - 1].reading;
-        const month = new Date(date).toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
-
-        let usage;
-        if (dayReadings.length > 1) {
-          usage = lastReading - firstReading;
-        } else if (i === 0) {
-          usage = 'N/A';
-        } else {
-          usage = lastReading - prevLastReading;
-        }
-
-        daily[meter].push({ date, usage });
-        if (usage !== 'N/A') {
-          totalUsage[meter] += usage;
-          monthly[meter][month] = (monthly[meter][month] || 0) + usage;
-        }
-        prevLastReading = lastReading;
-      });
-
-      if (meterReadings.length > 1) {
-        rangeUsage[meter] = meterReadings[meterReadings.length - 1].reading - meterReadings[0].reading;
-      }
-    });
-
-    return { daily, monthly, total: totalUsage, range: rangeUsage };
-  };
-
-  const usage = calculateUsage();
 
   return (
     <div className={`container ${darkMode ? 'dark-mode' : ''}`}>
@@ -177,19 +141,120 @@ function App() {
       </motion.div>
 
       <motion.div className="price-section" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.3 }}>
-        <label><i className="fas fa-rupee-sign"></i> Price per Unit (₹): </label>
-        <input
-          type="number"
-          value={pricePerUnit}
-          onChange={(e) => setPricePerUnit(e.target.value)}
-          min="0"
-          step="0.01"
-        />
+        <h2><i className="fas fa-indian-rupee-sign"></i> Slabwise Calculation of Charges</h2>
+        <table className="slab-table">
+          <thead>
+            <tr>
+              <th>From Unit</th>
+              <th>To Unit</th>
+              <th>Units</th>
+              <th>Rate (₹)</th>
+              <th>Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              { from: 1, to: 100, units: 100 },
+              { from: 101, to: 400, units: 300 },
+              { from: 401, to: 500, units: 100 },
+              { from: 501, to: 600, units: 100 },
+              { from: 601, to: 800, units: 200 },
+              { from: 801, to: 1000, units: 200 },
+              { from: 1001, to: 5000, units: 4000 },
+            ].map((slab, index) => (
+              <tr key={index}>
+                <td>{slab.from}</td>
+                <td>{slab.to}</td>
+                <td>{slab.units}</td>
+                <td>
+                  <input
+                    type="number"
+                    value={priceTiers[`tier${index + 1}`]}
+                    onChange={(e) => setPriceTiers({ ...priceTiers, [`tier${index + 1}`]: Number(e.target.value) })}
+                    min="0"
+                    step="0.01"
+                  />
+                </td>
+                <td>
+                  {usage && usage.total[meterId] > 0
+                    ? (Math.min(usage.total[meterId], slab.to) - Math.max(usage.total[meterId], slab.from) + 1 > 0
+                      ? (Math.min(usage.total[meterId], slab.to) - Math.max(usage.total[meterId], slab.from) + 1) * priceTiers[`tier${index + 1}`]
+                      : 0).toFixed(2)
+                    : '0.00'}
+                </td>
+              </tr>
+            ))}
+            <tr className="total-row">
+              <td colSpan="4">Total</td>
+              <td>{usage ? usage.cost[meterId] || '0.00' : '0.00'}</td>
+            </tr>
+          </tbody>
+        </table>
       </motion.div>
 
-      <motion.div className="readings" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
+      <motion.div className="usage" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
+        <h2><i className="fas fa-chart-line"></i> Usage</h2>
+        {usage && Object.keys(usage.total)
+          .filter(meter => meter === meterId)
+          .map(meter => (
+            <div key={meter} className="meter-usage">
+              <h3><i className="fas fa-tachometer-alt"></i> {meter}</h3>
+              <p>Total Usage: {usage.total[meter]} kWh (₹{usage.cost[meter]})</p>
+              <p>Range Usage: {usage.range[meter]} kWh</p>
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Daily Usage (kWh)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usage.daily[meter]?.map(d => (
+                      <motion.tr
+                        key={d.date}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <td>{d.date}</td>
+                        <td>{d.usage === 'N/A' ? 'N/A' : d.usage}</td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <h4>Monthly Usage</h4>
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Usage (kWh)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(usage.monthly[meter] || {}).map(([month, usage]) => (
+                      <motion.tr
+                        key={month}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <td>{month}</td>
+                        <td>{usage}</td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+      </motion.div>
+
+      <motion.div className="readings" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5 }}>
         <div className="section-header">
-          <h2><i className="fas fa-list"></i> Readings</h2>
+          <h2><i className="fas fa-list"></i> All Readings</h2>
           <button onClick={clearAll} disabled={loading}><i className="fas fa-trash-alt"></i> Clear All</button>
         </div>
         <div className="table-container">
@@ -221,68 +286,6 @@ function App() {
             </tbody>
           </table>
         </div>
-      </motion.div>
-
-      <motion.div className="usage" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5 }}>
-        <h2><i className="fas fa-chart-line"></i> Usage</h2>
-        {Object.keys(usage.total).map(meter => (
-          <div key={meter} className="meter-usage">
-            <h3><i className="fas fa-tachometer-alt"></i> {meter}</h3>
-            <p>Total Usage: {usage.total[meter]} kWh (₹{(usage.total[meter] * pricePerUnit).toFixed(2)})</p>
-            <p>Range Usage: {usage.range[meter]} kWh (₹{(usage.range[meter] * pricePerUnit).toFixed(2)})</p>
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Daily Usage (kWh)</th>
-                    <th>Cost (₹)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usage.daily[meter]?.map(d => (
-                    <motion.tr
-                      key={d.date}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <td>{d.date}</td>
-                      <td>{d.usage === 'N/A' ? 'N/A' : d.usage}</td>
-                      <td>{d.usage === 'N/A' ? 'N/A' : (d.usage * pricePerUnit).toFixed(2)}</td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <h4>Monthly Usage</h4>
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Month</th>
-                    <th>Usage (kWh)</th>
-                    <th>Cost (₹)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(usage.monthly[meter] || {}).map(([month, usage]) => (
-                    <motion.tr
-                      key={month}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <td>{month}</td>
-                      <td>{usage}</td>
-                      <td>{(usage * pricePerUnit).toFixed(2)}</td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ))}
       </motion.div>
     </div>
   );
