@@ -22,6 +22,7 @@ function App() {
   const [error, setError] = useState('');
   const [darkMode, setDarkMode] = useState(false);
   const [usage, setUsage] = useState(null);
+  const [isSlabOpen, setIsSlabOpen] = useState(false);
 
   const fetchReadings = useCallback(async (url = '/api/readings', params = {}) => {
     setLoading(true);
@@ -46,11 +47,11 @@ function App() {
       setError('Failed to load readings: ' + (err.response?.data?.error || err.message));
     }
     setLoading(false);
-  }, [meterId, priceTiers]); // Dependencies for fetchReadings
+  }, [meterId, priceTiers]);
 
   useEffect(() => {
     fetchReadings();
-  }, [fetchReadings]); // Now fetchReadings is stable and can be a dependency
+  }, [fetchReadings]);
 
   const addReading = async () => {
     if (!reading) return setError('Reading is required');
@@ -141,69 +142,28 @@ function App() {
         <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
         <button onClick={fetchRange} disabled={loading}><i className="fas fa-filter"></i> Filter</button>
+        {usage && Object.keys(usage.total)
+          .filter(meter => meter === meterId)
+          .map(meter => (
+            <div key={meter} className="usage-stats">
+              <p>Total Usage: {usage.total[meter]} kWh (₹{usage.cost[meter]})</p>
+              <p>Range Usage: {usage.range[meter]} kWh</p>
+            </div>
+          ))}
       </motion.div>
 
-      <motion.div className="price-section" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.3 }}>
-        <h2><i className="fas fa-indian-rupee-sign"></i> Slabwise Calculation of Charges</h2>
-        <table className="slab-table">
-          <thead>
-            <tr>
-              <th>From Unit</th>
-              <th>To Unit</th>
-              <th>Units</th>
-              <th>Rate (₹)</th>
-              <th>Amount (₹)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[
-              { from: 1, to: 100, units: 100 },
-              { from: 101, to: 400, units: 300 },
-              { from: 401, to: 500, units: 100 },
-              { from: 501, to: 600, units: 100 },
-              { from: 601, to: 800, units: 200 },
-              { from: 801, to: 1000, units: 200 },
-              { from: 1001, to: 5000, units: 4000 },
-            ].map((slab, index) => (
-              <tr key={index}>
-                <td>{slab.from}</td>
-                <td>{slab.to}</td>
-                <td>{slab.units}</td>
-                <td>
-                  <input
-                    type="number"
-                    value={priceTiers[`tier${index + 1}`]}
-                    onChange={(e) => setPriceTiers({ ...priceTiers, [`tier${index + 1}`]: Number(e.target.value) })}
-                    min="0"
-                    step="0.01"
-                  />
-                </td>
-                <td>
-                  {usage && usage.total[meterId] > 0
-                    ? (Math.min(usage.total[meterId], slab.to) - Math.max(usage.total[meterId], slab.from) + 1 > 0
-                      ? (Math.min(usage.total[meterId], slab.to) - Math.max(usage.total[meterId], slab.from) + 1) * priceTiers[`tier${index + 1}`]
-                      : 0).toFixed(2)
-                    : '0.00'}
-                </td>
-              </tr>
-            ))}
-            <tr className="total-row">
-              <td colSpan="4">Total</td>
-              <td>{usage ? usage.cost[meterId] || '0.00' : '0.00'}</td>
-            </tr>
-          </tbody>
-        </table>
-      </motion.div>
-
-      <motion.div className="usage" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
+      <motion.div
+        className="usage"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+      >
         <h2><i className="fas fa-chart-line"></i> Usage</h2>
         {usage && Object.keys(usage.total)
           .filter(meter => meter === meterId)
           .map(meter => (
             <div key={meter} className="meter-usage">
               <h3><i className="fas fa-tachometer-alt"></i> {meter}</h3>
-              <p>Total Usage: {usage.total[meter]} kWh (₹{usage.cost[meter]})</p>
-              <p>Range Usage: {usage.range[meter]} kWh</p>
               <div className="table-container">
                 <table>
                   <thead>
@@ -255,7 +215,72 @@ function App() {
           ))}
       </motion.div>
 
-      <motion.div className="readings" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5 }}>
+      <motion.div
+        className="price-section"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+      >
+        <div className="section-header">
+          <h2><i className="fas fa-indian-rupee-sign"></i> Slabwise Calculation of Charges</h2>
+          <button className="toggle-button" onClick={() => setIsSlabOpen(!isSlabOpen)}>
+            {isSlabOpen ? <i className="fas fa-chevron-up"></i> : <i className="fas fa-chevron-down"></i>}
+            {isSlabOpen ? ' Hide' : ' Show'}
+          </button>
+        </div>
+        {isSlabOpen && (
+          <table className="slab-table">
+            <thead>
+              <tr>
+                <th>From Unit</th>
+                <th>To Unit</th>
+                <th>Units</th>
+                <th>Rate (₹)</th>
+                <th>Amount (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { from: 1, to: 100, units: 100 },
+                { from: 101, to: 400, units: 300 },
+                { from: 401, to: 500, units: 100 },
+                { from: 501, to: 600, units: 100 },
+                { from: 601, to: 800, units: 200 },
+                { from: 801, to: 1000, units: 200 },
+                { from: 1001, to: 5000, units: 4000 },
+              ].map((slab, index) => (
+                <tr key={index}>
+                  <td>{slab.from}</td>
+                  <td>{slab.to}</td>
+                  <td>{slab.units}</td>
+                  <td>
+                    <input
+                      type="number"
+                      value={priceTiers[`tier${index + 1}`]}
+                      onChange={(e) => setPriceTiers({ ...priceTiers, [`tier${index + 1}`]: Number(e.target.value) })}
+                      min="0"
+                      step="0.01"
+                    />
+                  </td>
+                  <td>
+                    {usage && usage.total[meterId] > 0
+                      ? (Math.min(usage.total[meterId], slab.to) - Math.max(usage.total[meterId], slab.from) + 1 > 0
+                        ? (Math.min(usage.total[meterId], slab.to) - Math.max(usage.total[meterId], slab.from) + 1) * priceTiers[`tier${index + 1}`]
+                        : 0).toFixed(2)
+                      : '0.00'}
+                  </td>
+                </tr>
+              ))}
+              <tr className="total-row">
+                <td colSpan="4">Total</td>
+                <td>{usage ? usage.cost[meterId] || '0.00' : '0.00'}</td>
+              </tr>
+            </tbody>
+          </table>
+        )}
+      </motion.div>
+
+      <motion.div className="readings" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.6 }}>
         <div className="section-header">
           <h2><i className="fas fa-list"></i> All Readings</h2>
           <button onClick={clearAll} disabled={loading}><i className="fas fa-trash-alt"></i> Clear All</button>

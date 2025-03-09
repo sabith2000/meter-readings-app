@@ -21,8 +21,8 @@ body {
 
 /* Dark Mode */
 .container.dark-mode {
-  background: linear-gradient(135deg, #2c3447, #1e252f);
-  color: #f0f4f8;
+  background: linear-gradient(135deg, #121212, #1c2526);
+  color: #e0e0e0;
 }
 
 .container.dark-mode .input-section,
@@ -30,47 +30,78 @@ body {
 .container.dark-mode .price-section,
 .container.dark-mode .readings,
 .container.dark-mode .usage {
-  background: #3a4358;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  background: #2c3539;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
 }
 
 .container.dark-mode input,
 .container.dark-mode select,
 .container.dark-mode button {
-  background: #4a5366;
-  border-color: #5a6378;
-  color: #f0f4f8;
+  background: #3b4a50;
+  border-color: #5c6b73;
+  color: #e0e0e0;
 }
 
 .container.dark-mode .error {
   background: #5a2e2e;
+  color: #ff9999;
 }
 
 .container.dark-mode table {
-  background: #3a4358;
+  background: #2c3539;
 }
 
 .container.dark-mode th {
-  background: #4a5366;
-  color: #00d4ff;
+  background: #455a64;
+  color: #80deea;
+}
+
+.container.dark-mode td {
+  color: #b0bec5;
 }
 
 .container.dark-mode tr:hover {
-  background: #4a5366;
+  background: #37474f;
 }
 
 .container.dark-mode .slab-table th {
-  background: #4a5366;
-  color: #00d4ff;
+  background: #455a64;
+  color: #80deea;
 }
 
 .container.dark-mode .slab-table td {
-  background: #3a4358;
+  background: #2c3539;
+  color: #b0bec5;
 }
 
 .container.dark-mode .total-row {
-  background: #2f3b4c;
-  color: #00ff00;
+  background: #2e7d32;
+  color: #ffffff;
+}
+
+.container.dark-mode .total-row td {
+  background: #2e7d32;
+}
+
+.container.dark-mode .toggle-button {
+  background: #455a64;
+  color: #80deea;
+  border: 1px solid #5c6b73;
+}
+
+.container.dark-mode .toggle-button:hover {
+  background: #546e7a;
+  color: #b2ebf2;
+}
+
+.container.dark-mode h2,
+.container.dark-mode h3,
+.container.dark-mode h4 {
+  color: #80deea;
+}
+
+.container.dark-mode .usage-stats p {
+  color: #b0bec5;
 }
 
 /* Header */
@@ -175,6 +206,25 @@ button:disabled {
 
 .readings td button:hover {
   background: #d81e5b;
+}
+
+.toggle-button {
+  background: #00b4d8;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.toggle-button:hover {
+  background: #0096c7;
+  transform: scale(1.05);
 }
 
 /* Icons */
@@ -321,9 +371,13 @@ tr:hover {
   color: #00b4d8;
 }
 
+.usage-stats {
+  margin: 15px 0;
+}
+
 .meter-usage p {
   font-size: 1.1rem;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
   color: #1a1a1a;
 }
 
@@ -363,5 +417,16 @@ tr:hover {
 
   .slab-table input {
     width: 60px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .toggle-button {
+    width: 100%;
+    justify-content: center;
   }
 }

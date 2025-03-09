@@ -5,7 +5,7 @@ const Reading = require('../models/Reading');
 // Add a reading
 router.post('/add', async (req, res) => {
   try {
-    console.log('Received POST /api/readings/add with body:', req.body); // Debug log
+    console.log('Received POST /api/readings/add with body:', req.body);
     const { meterId, reading } = req.body;
     if (!meterId || !reading) {
       console.log('Validation failed: meterId or reading missing');
@@ -13,10 +13,10 @@ router.post('/add', async (req, res) => {
     }
     const newReading = new Reading({ meterId, reading });
     const savedReading = await newReading.save();
-    console.log('Reading saved successfully:', savedReading); // Debug log
+    console.log('Reading saved successfully:', savedReading);
     res.status(201).json(savedReading);
   } catch (error) {
-    console.error('Error saving reading:', error.message); // Debug log
+    console.error('Error saving reading:', error.message);
     res.status(500).json({ error: 'Failed to add reading' });
   }
 });
@@ -34,6 +34,8 @@ router.get('/', async (req, res) => {
       tier6: parseFloat(tier6) || 10.5,
       tier7: parseFloat(tier7) || 11.55,
     };
+
+    console.log('Fetching readings with meterId:', meterId, 'and priceTiers:', priceTiers); // Debug log
 
     const query = meterId && meterId !== 'All' ? { meterId } : {};
     const readings = await Reading.find(query).sort({ timestamp: 1 });
@@ -55,7 +57,7 @@ router.get('/', async (req, res) => {
       let remaining = usage;
       let cost = 0;
       const slabs = [
-        { from: 0, to: 100, rate: priceTiers.tier1 },
+        { from: 1, to: 100, rate: priceTiers.tier1 },
         { from: 101, to: 400, rate: priceTiers.tier2 },
         { from: 401, to: 500, rate: priceTiers.tier3 },
         { from: 501, to: 600, rate: priceTiers.tier4 },
@@ -73,7 +75,7 @@ router.get('/', async (req, res) => {
           cost += amount;
           slabData.push({
             from: slab.from,
-            to: slab.from + units - 1,
+            to: Math.min(slab.to, slab.from + units - 1),
             units,
             rate: slab.rate,
             amount: amount.toFixed(2),
