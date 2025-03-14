@@ -47,9 +47,9 @@ function App() {
   useEffect(() => {
     if (token) {
       setIsAuthenticated(true);
-      fetchReadings(); // Initial fetch
-      const interval = setInterval(() => fetchReadings(), 5000); // Poll every 5 seconds
-      return () => clearInterval(interval); // Cleanup on unmount
+      fetchReadings();
+      const interval = setInterval(() => fetchReadings(), 5000);
+      return () => clearInterval(interval);
     }
   }, [token, fetchReadings]);
 
@@ -137,10 +137,12 @@ function App() {
           transition={{ duration: 0.5 }}
         >
           <h1><i className="fas fa-plug"></i> Meter Readings</h1>
-          <button className="mode-toggle" onClick={() => setDarkMode(!darkMode)}>
-            <i className={darkMode ? 'fas fa-sun' : 'fas fa-moon'}></i>
-            {darkMode ? ' Light' : ' Dark'}
-          </button>
+          <div className="header-buttons">
+            <button className="mode-toggle" onClick={() => setDarkMode(!darkMode)}>
+              <i className={darkMode ? 'fas fa-sun' : 'fas fa-moon'}></i>
+              {darkMode ? 'Light' : 'Dark'} Mode
+            </button>
+          </div>
         </motion.div>
         {error && (
           <motion.p className="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
@@ -169,9 +171,11 @@ function App() {
               placeholder="Password"
               required
             />
-            <button type="submit" disabled={loading}><i className="fas fa-sign-in-alt"></i> Login</button>
+            <button type="submit" disabled={loading}>
+              <i className="fas fa-sign-in-alt"></i> Login
+            </button>
           </form>
-          <p>Not registered? <a href="#" onClick={() => setError('Registration not implemented yet')}>Register</a></p>
+          <p>Not registered? <button onClick={() => setError('Registration not implemented yet')} style={{ background: 'none', border: 'none', color: '#2b6cb0', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}>Register</button></p>
         </motion.div>
       </div>
     );
@@ -186,21 +190,29 @@ function App() {
         transition={{ duration: 0.5 }}
       >
         <h1><i className="fas fa-plug"></i> Meter Readings</h1>
-        <button className="mode-toggle" onClick={() => setDarkMode(!darkMode)}>
-          <i className={darkMode ? 'fas fa-sun' : 'fas fa-moon'}></i>
-          {darkMode ? ' Light' : ' Dark'}
-        </button>
-        <button className="logout-button" onClick={handleLogout}>Logout</button>
+        <div className="header-buttons">
+          <button className="mode-toggle" onClick={() => setDarkMode(!darkMode)}>
+            <i className={darkMode ? 'fas fa-sun' : 'fas fa-moon'}></i>
+            {darkMode ? 'Light' : 'Dark'} Mode
+          </button>
+          <button className="logout-button" onClick={handleLogout}>
+            <i className="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </div>
       </motion.div>
 
-      {loading && <motion.p className="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>Loading...</motion.p>}
+      {loading && (
+        <motion.p className="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+          Loading...
+        </motion.p>
+      )}
       {error && (
         <motion.p className="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
           <i className="fas fa-exclamation-circle"></i> {error}
         </motion.p>
       )}
 
-      <motion.div className="input-section" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
+      <motion.div className="card input-section" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
         <select value={meterId} onChange={(e) => setMeterId(e.target.value)}>
           <option value="Meter1">Meter 1</option>
           <option value="Meter2">Meter 2</option>
@@ -212,13 +224,17 @@ function App() {
           onChange={(e) => setReading(e.target.value)}
           placeholder="Enter reading (kWh)"
         />
-        <button onClick={addReading} disabled={loading}><i className="fas fa-plus"></i> Add</button>
+        <button onClick={addReading} disabled={loading}>
+          <i className="fas fa-plus"></i> Add Reading
+        </button>
       </motion.div>
 
-      <motion.div className="range-section" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
+      <motion.div className="card range-section" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
         <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-        <button onClick={fetchRange} disabled={loading}><i className="fas fa-filter"></i> Filter</button>
+        <button onClick={fetchRange} disabled={loading}>
+          <i className="fas fa-filter"></i> Filter Range
+        </button>
         {usage && Object.keys(usage.total)
           .filter(meter => meter === meterId)
           .map(meter => (
@@ -230,12 +246,14 @@ function App() {
       </motion.div>
 
       <motion.div
-        className="usage"
+        className="card usage"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.4 }}
       >
-        <h2><i className="fas fa-chart-line"></i> Usage</h2>
+        <div className="section-header">
+          <h2><i className="fas fa-chart-line"></i> Usage Statistics</h2>
+        </div>
         {usage && Object.keys(usage.total)
           .filter(meter => meter === meterId)
           .map(meter => (
@@ -293,16 +311,16 @@ function App() {
       </motion.div>
 
       <motion.div
-        className="price-section"
+        className="card price-section"
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.5 }}
       >
         <div className="section-header">
-          <h2><i className="fas fa-indian-rupee-sign"></i> Slabwise Calculation of Charges</h2>
+          <h2><i className="fas fa-indian-rupee-sign"></i> Slabwise Charges</h2>
           <button className="toggle-button" onClick={() => setIsSlabOpen(!isSlabOpen)}>
             {isSlabOpen ? <i className="fas fa-chevron-up"></i> : <i className="fas fa-chevron-down"></i>}
-            {isSlabOpen ? ' Hide' : ' Show'}
+            {isSlabOpen ? 'Hide' : 'Show'} Slabs
           </button>
         </div>
         {isSlabOpen && (
@@ -357,10 +375,12 @@ function App() {
         )}
       </motion.div>
 
-      <motion.div className="readings" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.6 }}>
+      <motion.div className="card readings" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.6 }}>
         <div className="section-header">
           <h2><i className="fas fa-list"></i> All Readings</h2>
-          <button onClick={clearAll} disabled={loading}><i className="fas fa-trash-alt"></i> Clear All</button>
+          <button className="delete-button" onClick={clearAll} disabled={loading}>
+            <i className="fas fa-trash-alt"></i> Clear All
+          </button>
         </div>
         <div className="table-container">
           <table>
@@ -384,7 +404,9 @@ function App() {
                   <td>{r.reading}</td>
                   <td>{new Date(r.timestamp).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })}</td>
                   <td>
-                    <button onClick={() => deleteReadings([r._id])} disabled={loading}><i className="fas fa-times"></i></button>
+                    <button className="delete-button" onClick={() => deleteReadings([r._id])} disabled={loading}>
+                      <i className="fas fa-times"></i> Delete
+                    </button>
                   </td>
                 </motion.tr>
               ))}
